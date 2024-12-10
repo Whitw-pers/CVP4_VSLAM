@@ -1,10 +1,8 @@
-%function [features, validPoints] = extractORBFeatures(RGBimg, scaleFactor, numLevels, numPoints)
 function [features, validPoints] = extractORBFeatures(RGBimg, numPoints)
 % gets ORB features and descriptors
+% consider adding scale factor and numLevels if performance is poor
 % INPUTS
     % RGBimg:       RGB image to get features from
-    % scaleFactor:  
-    % numLevels:
     % numPoints:    number of uniformly distributed points to select
 % OUTPUTS
     % features:     descriptors for each feature extracted from RGBimg
@@ -12,7 +10,6 @@ function [features, validPoints] = extractORBFeatures(RGBimg, numPoints)
 
 % detect ORB features
 grayImg  = im2gray(RGBimg);
-%points = detectORBFeatures(grayImg, ScaleFactor=scaleFactor, NumLevels=numLevels);
 points = detectORBFeatures(grayImg);
 
 % Select a subset of features, uniformly distributed throughout the image
