@@ -48,7 +48,8 @@ scaleFactor = 1.2;
 numLevels   = 8;
 numPoints   = 1000;
 
-[preFeatures, prePoints] = extractORBFeatures(currImg, scaleFactor, numLevels, numPoints);
+%[preFeatures, prePoints] = extractORBFeatures(currImg, scaleFactor, numLevels, numPoints);
+[preFeatures, prePoints] = extractORBFeatures(currImg, numPoints);
 
 currFrame = currFrame + 1;
 firstImg       = currImg; % Preserve the first frame 
@@ -56,5 +57,5 @@ firstImg       = currImg; % Preserve the first frame
 % enter map initialization loop
 isMapInitialized  = false;
 
-while ~isMapInitialized && currFrame < length(imds.Files)
-end
+% while ~isMapInitialized && currFrame < length(imds.Files)
+% end
