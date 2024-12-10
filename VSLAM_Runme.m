@@ -28,10 +28,13 @@ imageFolder   = [dataFolder,'rgbd_dataset_freiburg3_long_office_household/rgb/']
 imds          = imageDatastore(imageFolder);
 
 % show first image to confirm function of data retrieval
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% might be nicer to have script store these images
+% for now I've included breakpoints at each checkpoint
 currFrame = 1;
 currImg = readimage(imds, currFrame);
 himage = imshow(currImg);
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Initialize Map
 % Set random seed for reproducibility
 rng(0);
@@ -88,5 +91,35 @@ while ~isMapInitialized && currFrame < length(imds.Files)
     inlierPrePoints = preMatches(inliersF);
     inlierCurrPoints = currMatches(inliersF);
     [relPose, valFrac] = estrelpose(F, intrinsics, inlierPrePoints, inlierCurrPoints);
+
+    % if less than 90% of inlier points project in front of both cameras, F
+    % is likely incorrect
+    if valFrac < 0.9 || numel(relPose) > 1
+        continue
+    end
     
+    % triangulate 3D world points from two views
+    % assume first view is at origin, second view (relPose) is relative to
+    % origin
+    [worldPoints, worldInliers, isValid] = triangulateWorldPoints(rigidtform3d, relPose, inlierPrePoints, inlierCurrPoints, intrinsics);
+
+    % if there is not sufficient parallax between views, check next frame
+    if ~isValid
+        continue
+    end
+
+    % get original index of features in the two keyframes
+    matches = matches(inliersF(worldInliers), :);
+
+    isMapInitialized = true;
+
+    disp(['Map initialized with frame 1 and frame ', num2str(currFrame - 1)])
+end
+
+% close previous figure and show matched features
+if isMapInitialized
+    close(himage.Parent.Parent);
+    hfeature = showMatchedFeatures(firstImg, currImg, prePoints(matches(:, 1)), currPoints(matches(:, 2)), "montage");
+else
+    error('map initialization failed')
 end
