@@ -1,0 +1,10 @@
+function [features, validPoints] = extractORBFeatures(RGBimg, scaleFactor, numLevels, numPoints)
+% gets ORB features and descriptors
+% INPUTS
+    % RGBimg:
+    %scaleFactor:
+% OUTPUTS
+    %
+
+end
+

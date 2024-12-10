@@ -31,7 +31,7 @@ himage = imshow(currImg);
 
 %% Initialize Map
 % Set random seed for reproducibility
-rng(0);
+%rng(0);
 
 % store camera intrinsics in cameraIntrinsics object
 % intrinsics for dataset at:
@@ -56,5 +56,4 @@ firstImg       = currImg; % Preserve the first frame
 % enter map initialization loop
 isMapInitialized  = false;
 
-while ~isMapInitialized && currFrame < length(imds.Files)
-end
+while ~isMapInitiali
