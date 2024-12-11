@@ -47,8 +47,8 @@ imageSize = size(currImg,[1 2]);      % in units of pixels
 intrinsics = cameraIntrinsics(focalLength, principalPoint, imageSize);
 
 % detect and extract orb features from first frame in set
-% scaleFactor = 1.2;
-% numLevels   = 8;
+scaleFactor = 1.2;
+numLevels   = 8;
 numPoints   = 1000;
 
 [preFeatures, prePoints] = extractORBFeatures(currImg, numPoints);
@@ -239,22 +239,8 @@ while currFrame < length(imds.Files)
     % Main Loop:
     % for each frame
         % 1) get ORB features and match with features in last keyframe with
-        % corresponding 3D world points. This gets us 3D-2D point
-        % correspondences in current frame.
-        % 2) use 3D-2D point correspondences to estimate camera pose with
-        % PnP and refine with motion-only bundle adjustment
-        % 3) search for more 3D-2D correspondences by projecting nearby
-        % world points into camera frame, refine camera pose again with
-        % bundle adjustment
-        % 4) decide if current frame is keyframe. If yes, continue to local
-        % mapping and loop closure detection. Otherwise, continue to next
-        % frame.
+        % corresponding 3D world points. Predict locations of matching
+        % features in current frame with KLT tracker. This step 
+        % 2) use 3D-2D point correspondences
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    % get ORB features for current frame
-    currImg = readimage(imds, currFrame);
-    [currFeatures, currPoints] = extractORBFeatures(currImg, numPoints);
-
-    % track last keyframe
-
 end
