@@ -123,3 +123,34 @@ if isMapInitialized
 else
     error('map initialization failed')
 end
+
+%% Store initial keyframes and world points
+% CV toolbox uses imageviewset and worldpointset objects to store store
+% keyframes and their associated data and world points and their 2D
+% correspondences
+
+% initialize empty objects
+keyframeSet = imageviewset;
+worldPointSet = worldpointset;
+
+% add first keyframe; place camera at origin
+preViewID = 1;
+keyframeSet = addView(keyframeSet, preViewID, rigidtform3d, Points = prePoints, Features = preFeatures.Features);
+
+% add second keyframe
+currViewID = 2;
+keyframeSet = addView(keyframeSet, currViewID, relPose, Points = currPoints, Features = currFeatures.Features);
+
+% add connection between the first and the second keyframes
+keyframeSet = addConnection(keyframeSet, preViewID, currViewID, relPose, Matches = matches);
+
+% add 3D world points
+[worldPointSet, newPointIdx] = addWorldPoints(worldPointSet, worldPoints);
+
+% add 3D-2D point correspondences from first keyframe
+worldPointSet = addCorrespondences(worldPointSet, preViewID, newPointIdx, matches(:, 1));
+
+% add 3D-2D point correspondences from second keyframe
+worldPointSet = addCorrespondences(worldPointSet, currViewID, newPointIdx, matches(:, 2));
+
+%% Initialize place recognition database for loop closure detection

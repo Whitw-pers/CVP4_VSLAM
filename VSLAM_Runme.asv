@@ -116,3 +116,28 @@ while ~isMapInitialized && currFrame < length(imds.Files)
     disp(['Map initialized with frame 1 and frame ', num2str(currFrame - 1)])
 end
 
+% close previous figure and show matched features
+if isMapInitialized
+    close(himage.Parent.Parent);
+    hfeature = showMatchedFeatures(firstImg, currImg, prePoints(matches(:, 1)), currPoints(matches(:, 2)), "montage");
+else
+    error('map initialization failed')
+end
+
+%% Store initial keyframes and world points
+% CV toolbox uses imageviewset and worldpointset objects to store store
+% keyframes and their associated data and world points and their 2D
+% correspondences
+
+% initialize empty objects
+keyFrameSet = imageviewset;
+worldPointSet = worldpointset;
+
+% add first keyframe; place camera at origin
+preViewID = 1;
+keyFrameSet = addView(keyFrameSet, preViewID, rigidtform3d, Points=prePoints, Features=preFeatures.Features);
+
+% add second keyframe
+currViewI= 2;
+vSetKeyFrames = addView(vSetKeyFrames, currViewId, relPose, Points=currPoints,...
+    Features=currFeatures.Features);
