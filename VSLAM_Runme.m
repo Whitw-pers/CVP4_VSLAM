@@ -10,8 +10,6 @@ dataFolder = fullfile(tempdir, 'tum_rgbd_dataset', filesep);
 tgzFileName = [dataFolder, 'fr3_office.tgz'];
 
 % Create a folder in a temporary directory to save the downloaded file
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% this may be unnecessary
 if ~exist(dataFolder, "dir")
     mkdir(dataFolder); 
     disp('Downloading fr3_office.tgz. Be patient, this can take a minute.') 
@@ -21,11 +19,10 @@ if ~exist(dataFolder, "dir")
     disp('Extracting fr3_office.tgz ...') 
     untar(tgzFileName, dataFolder); 
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Create imageDatastore object to store the images
-imageFolder   = [dataFolder,'rgbd_dataset_freiburg3_long_office_household/rgb/'];
-imds          = imageDatastore(imageFolder);
+imageFolder = [dataFolder,'rgbd_dataset_freiburg3_long_office_household/rgb/'];
+imds = imageDatastore(imageFolder);
 
 % show first image to confirm function of data retrieval
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,3 +151,66 @@ worldPointSet = addCorrespondences(worldPointSet, preViewID, newPointIdx, matche
 worldPointSet = addCorrespondences(worldPointSet, currViewID, newPointIdx, matches(:, 2));
 
 %% Initialize place recognition database for loop closure detection
+% many VSLAM techniques, ORBSLAM included, utilize the Bag of Words (BoW)
+% algorithm for loop closure detection
+
+% bagOfFeaturesDBoW object CV toolbox uses takes a long time to create
+if ~exist("bag", "var")
+    disp('Creating Bag of Words. Please be patient, this takes a long time.')
+    bag = bagOfFeaturesDBoW(imds);
+end
+
+% initialize loop closure detection database
+loopDatabase = dbowLoopDetector(bag);
+
+% Add features of the first two key frames to the database
+addVisualFeatures(loopDatabase, preViewID, preFeatures);
+addVisualFeatures(loopDatabase, currViewID, currFeatures);
+
+%% Refine and visualize initial reconstruction
+
+% perform bundle adjustment on first two keyframes
+% note that PCG solver is from g2o library, which ORBSLAM also uses
+tracks = findTracks(keyframeSet);
+camPoses = poses(keyframeSet);
+% [refinedPoints, refinedPoses] = bundleAdjustment(worldPoints, tracks, ...
+%     camPoses, intrinsics, FixedViewIDs = 1, PointsUndistorted = true, ...
+%     AbsoluteTolerance = 1e-7, RelativeTolerance = 1e-15, ...
+%     MaxIterations = 20, Solver = "preconditioned-conjugate-gradient");
+[refinedPoints, refinedPoses] = bundleAdjustment(worldPoints, tracks, ...
+    camPoses, intrinsics, FixedViewIDs = 1, PointsUndistorted = true, ...
+    AbsoluteTolerance = 1e-7, RelativeTolerance = 1e-15, ...
+    MaxIterations = 20, Solver = "preconditioned-conjugate-gradient");
+
+% scale map and camera pose using median world point depth
+medDepth   = median(vecnorm(refinedPoints.'));
+refinedPoints = refinedPoints / medDepth;
+
+refinedPoses.AbsolutePose(currViewID).Translation = refinedPoses.AbsolutePose(currViewID).Translation / medDepth;
+relPose.Translation = relPose.Translation/medDepth;
+
+% update keyframes with refined poses
+keyframeSet = updateView(keyframeSet, refinedPoses);
+keyframeSet = updateConnection(keyframeSet, preViewID, currViewID, relPose);
+
+% update map with refined world points
+worldPointSet = updateWorldPoints(worldPointSet, newPointIdx, refinedPoints);
+
+% update view directions and depth
+worldPointSet = updateLimitsAndDirection(worldPointSet, newPointIdx, keyframeSet.Views);
+
+% update representative view
+worldPointSet = updateRepresentativeView(worldPointSet, newPointIdx, keyframeSet.Views);
+
+% Visualize matched features in the current frame
+% will use class copied from MathWorks CV toolbox example for visualization
+close(hfeature.Parent.Parent);
+featurePlot = helperVisualizeMatchedFeatures(currImg, currPoints(matches(:,2)));
+
+% Visualize initial map points and camera trajectory
+mapPlot = helperVisualizeMotionAndStructure(keyframeSet, worldPointSet);
+
+% Show legend
+showLegend(mapPlot);
+
+%% Main Loop
