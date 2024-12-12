@@ -256,5 +256,11 @@ while currFrame < length(imds.Files)
     [currFeatures, currPoints] = extractORBFeatures(currImg, numPoints);
 
     % track last keyframe
+    [currPose, worldPointsIdx, featureIdx] = trackLastKeyframe(...
+        tracker, currImg, worldPointSet, keyframeSet.Views, currFeatures, ...
+        currPoints, lastKeyframeID, intrinsics);
+
+    % check if current frame is keyframe
+    
 
 end
