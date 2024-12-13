@@ -261,6 +261,9 @@ while currFrame < length(imds.Files)
         currPoints, lastKeyframeID, intrinsics);
 
     % check if current frame is keyframe
-    
+    [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = ...
+        stockKeyframeSelector(worldPointSet, keyframeSet, worldPointsIdx, ...
+        featureIdx, currPose, currFeatures, currPoints, intrinsics, ...
+        isLastKeyframe, lastKeyframe, currFrame);
 
 end

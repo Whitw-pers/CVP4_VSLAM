@@ -6,18 +6,14 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
 % INPUTS:
 % OUTPUTS:
 
-    % adjust parameters to tune performance of stock keyframe selector
     numSkipFrames = 20;
     numPointsKeyframe = 90;
 
     persistent numPointsRefKeyframe localPointsIdx localKeyframeIDsInternal
 
     if isempty(numPointsRefKeyframe) || newKeyframeAdded
-        [localPointsIdx, localKeyframeIDsInternal, numPointsRefKeyframe] = ...
-            updateRefKeyFrameAndLocalPoints(worldPointSet, keyframeSet, worldPointsIdx);
+        [localPointsIdx, localKeyframeIDsInternal, numPointsRefKeyframe] = .
     end
-
-    
 
 end
 
