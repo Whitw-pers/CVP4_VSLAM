@@ -236,7 +236,7 @@ initialize(tracker, currPoints.Location(matches(:,2), :), currImg);
 
 while currFrame < length(imds.Files)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Main Loop:
+    % Feature tracking:
     % for each frame
         % 1) get ORB features and match with features in last keyframe with
         % corresponding 3D world points. This gets us 3D-2D point
@@ -330,6 +330,7 @@ while currFrame < length(imds.Files)
 
     updatePlot(mapPlot, keyframeSet, worldPointSet);
 
+    % set feature points for tracking
     [~, idx2D] = findWorldPointsInView(worldPointSet, currKeyframeID);
     setPoints(tracker, currPoints.Location(idx2D, :));
 
@@ -339,4 +340,37 @@ while currFrame < length(imds.Files)
         %
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+    % don't check loop closure until a certain number of keyframes have
+    % been created
+    if currKeyframeID > 20
+
+        % detect possible loop closure candidates
+        % put loopEdgeNumMatches in the function
+        [isDetected, loopCandidates] = checkLoopClosure(keyframeSet, ...
+            currKeyframeID, loopDatabase, currFeatures);
+
+        if isDetected
+
+            % add loop connections to pose graph
+            [isLoopClosed, worldPointSet, keyframeSet] = addLoopConnection(...
+                worldPointSet, keyframeSet, loopCandidates, currKeyframeID, ...
+                currFeatures);
+            
+        end
+
+    end
+
+    % if no loop closured detected, add current features to loop database
+    if ~isLoopClosed
+        
+        addVisualFeatures(loopDatabase, currKeyframeID, currFeatures);
+
+    end
+
+    % updated IDs and indexes
+    lastKeyframeID = currKeyframeID;
+    lastKeyframe = currFrame;
+    addedFrames = [addedFrames; currFrame];
+    currFrame = currFrame + 1;
+    
 end
