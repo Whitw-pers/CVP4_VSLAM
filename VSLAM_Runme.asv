@@ -284,17 +284,9 @@ while currFrame < length(imds.Files)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Local mapping:
     % for each keyframe
-        % 1) add new keyframe to pose graph and update existing world points
-        % observed by new keyframe
+        % 1) add new keyframe and update world points observed by new keyframe
         % 2) to minimize outliers, world point must be observed in at least 3
-        % keyframes to be considered valid
-        % 3) create new world points by matching and triangulating features
-        % in connected keyframes
-        % 4) perform local bundle adjustment to refine current keyframe
-        % pose, connected keyframe pose and world points observed in
-        % current and connected keyframes
+        % keyframes 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    
 
 end
