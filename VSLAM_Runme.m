@@ -295,6 +295,48 @@ while currFrame < length(imds.Files)
         % current and connected keyframes
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    
+    % 1) add new keyframe to pose graph
+    [worldPointSet, keyframeSet] = addKeyframe(worldPointSet, keyframeSet, ...
+        currPose, currFeatures, currPoints, worldPointsIdx, featureIdx, ...
+        localKeyframeIDs);
+
+    % 2) remove world points observed in less than 3 keyframes
+    outliersIdx = setdiff(newPointIdx, worldPointsIdx);
+    if ~isempty(outliersIdx)
+        worldPointSet = removeWorldPoints(worldPointSet, outliersIdx);
+    end
+
+    % 3) create new world points by matching and triangulating features
+    % ideally put minNumMatches and minParallax inside the function
+    % also I haven't used scaleFactor
+    [worldPointSet, keyframeSet, newPointIdx] = createWorldPoints(worldPointSet, ...
+        keyframeSet, currKeyframeID, intrinsics);
+
+    % 4) refine poses and points with local bundle adjustment
+    [refinedViews, dist] = connectedViews(keyframeSet, currKeyframeID, MaxDistance = 2);
+    refinedKeyframeIDs = refinedViews.ViewId;
+    fixedViewIDs = refinedKeyframeIDs(dist == 2);
+    fixedViewIDs = fixedViewIDs(1:min(10, numel(fixedViewIDs)));
+
+    [worldPointSet, keyframeSet, worldPointIdx] = bundleAdjustment(worldPointSet, ...
+        keyframeSet, [refinedKeyframeIDs; currKeyframeID], intrinsics, ...
+        FixedViewIDs=fixedViewsIDs, PointsUndistorted=true, AbsoluteTolerance=1e-7, ...
+        RelativeTolerance=1e-16, Solver="preconditioned-conjugate-gradient", ...
+        MaxIteration = 10);
+
+    worldPointSet = updateLimitsAndDirection(worldPointSet, worldPointIdx, keyframeSet.Views);
+
+    worldPointSet = updateRepresentativeView(worldPointSet, worldPointIdx, keyframeSet.Views);
+
+    updatePlot(mapPlot, keyframeSet, worldPointSet);
+
+    [~, idx2D] = findWorldPointsInView(worldPointSet, currKeyframeID);
+    setPoints(tracker, currPoints.Location(idx2D, :));
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Loop closure detection:
+    % for each keyframe
+        %
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end
