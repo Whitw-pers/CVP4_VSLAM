@@ -9,6 +9,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     % adjust parameters to tune performance of stock keyframe selector
     numSkipFrames = 20;
     numPointsKeyframe = 90;
+    scaleFactor = 1.2;
 
     persistent numPointsRefKeyframe localPointsIdx localKeyframeIDsInternal
 
@@ -17,7 +18,22 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
             updateRefKeyFrameAndLocalPoints(worldPointSet, keyframeSet, worldPointsIdx);
     end
 
-    
+    % project world points into frame and search for more 2D-3D point
+    % correspondences
+    newWorldPointIdx = setdiff(localPointsIdx, worldPointsIdx, 'stable');
+    [localFeatures, localPoints] = getFeatures(worldPointSet, keyframeSet.Views, ...
+        newWorldPointIdx);
+    [projectedPoints, inliersIdx] = removeOutlierMapPoints(worldPointSet, ...
+        currPose, intrinsics, newWorldPointIdx, scaleFactor);
+
+    newWorldPointIdx = newWorldPointIdx(inliersIdx);
+    localFeatures = localFeatures(inliersIdx, :);
+    localPoints = localPoints(inliersIdx);
+
+    unmatchedFeatureIdx = setdiff(cast((1:size(currFeatures.Features, 1)).', 'uint32'), ...
+        featureIdx, 'stable');
+    unmatchedFeatures = currFeatures.Features(unmatchedFeatureIdx, :);
+    unmatchedValidPoints = currPoints(unmatchedFeatureIdx);
 
 end
 
