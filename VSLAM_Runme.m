@@ -375,6 +375,7 @@ while currFrame < length(imds.Files)
     
 end
 
+% finish with pose graph optimization
 if isLoopClosed
 
     % optimize poses
@@ -393,6 +394,7 @@ if isLoopClosed
 
 end
 
+% load and plot ground truth data for comparison
 if isLoopClosed
 
     % load ground truth data
@@ -405,6 +407,7 @@ if isLoopClosed
 
 end
 
+% evaluate algorithm performance
 if isLoopClosed
 
     % evaluation metrics
@@ -415,5 +418,5 @@ if isLoopClosed
     figure
     ax = plot(errMetrics, "absolute-translation");
     view(ax, [2.70 -49.20]);
-    
+
 end
