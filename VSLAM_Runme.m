@@ -337,7 +337,11 @@ while currFrame < length(imds.Files)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Loop closure detection:
     % for each keyframe
-        %
+        % 1) detect possible loop closures
+        % 2) test possible loop closure candidates, if loop closure
+        % detected, add loop connections to pose graph
+        % 3) if loop closure not detected, add visual features to loop
+        % database
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % don't check loop closure until a certain number of keyframes have

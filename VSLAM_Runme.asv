@@ -337,7 +337,10 @@ while currFrame < length(imds.Files)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Loop closure detection:
     % for each keyframe
-        %
+        % 1) detect possible loop closures
+        % 2) test possible loop closure candidates, if loop closure
+        % detected, add loop connections to pose graph
+        % 3) if loop closure not detected, add visual feat
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % don't check loop closure until a certain number of keyframes have
@@ -375,6 +378,9 @@ while currFrame < length(imds.Files)
     
 end
 
+%% Final Optimization and Plotting
+
+% finish with pose graph optimization
 if isLoopClosed
 
     % optimize poses
@@ -393,6 +399,7 @@ if isLoopClosed
 
 end
 
+% load and plot ground truth data for comparison
 if isLoopClosed
 
     % load ground truth data
@@ -405,6 +412,7 @@ if isLoopClosed
 
 end
 
+% evaluate algorithm performance
 if isLoopClosed
 
     % evaluation metrics
@@ -412,5 +420,8 @@ if isLoopClosed
         AlignmentType= 'similarity');
     disp(['Absolute RMSE for key frame location (m): ', num2str(errMetrics.AbsoluteRMSE(2))]);
     % plot absolute translation error at each keyframe
-    f
+    figure
+    ax = plot(errMetrics, "absolute-translation");
+    view(ax, [2.70 -49.20]);
+
 end
