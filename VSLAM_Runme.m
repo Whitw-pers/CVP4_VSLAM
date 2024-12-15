@@ -374,3 +374,46 @@ while currFrame < length(imds.Files)
     currFrame = currFrame + 1;
     
 end
+
+if isLoopClosed
+
+    % optimize poses
+    % put minNumMatches in the function
+    optKeyframeSet = optimizePoses(keyframeSet, Tolerance = 1e-16);
+
+    % update world points after optimizing poses
+    worldPointSet = updateGlobalMap(worldPointSet, keyframeSet, ...
+        optKeyframeSet);
+    updatePlot(mapPlot, keyframeSet, worldPointSet);
+
+    % plot optimized camera trajectory
+    optPoses = poses(optKeyframeSet);
+    plotOptimizedTrajectory(mapPlot, optPoses);
+    showLegend(mapPlot);
+
+end
+
+if isLoopClosed
+
+    % load ground truth data
+    groundTruthData = load('orbslamGroundTruth.mat');
+    groundTruth = groundTruthData.gTruth;
+
+    % plot the actual camera trajectory
+    plotActualTrajectory(mapPlot, groundTruth(addedFrames), optPoses);
+    showLegend(mapPlot);
+
+end
+
+if isLoopClosed
+
+    % evaluation metrics
+    errMetrics = compareTrajectories(optPoses.AbsolutePose, groundTruth(addedFrames), ...
+        AlignmentType= 'similarity');
+    disp(['Absolute RMSE for key frame location (m): ', num2str(errMetrics.AbsoluteRMSE(2))]);
+    % plot absolute translation error at each keyframe
+    figure
+    ax = plot(errMetrics, "absolute-translation");
+    view(ax, [2.70 -49.20]);
+    
+end
