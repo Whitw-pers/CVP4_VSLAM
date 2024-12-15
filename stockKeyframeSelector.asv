@@ -60,8 +60,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     if isKeyframe
         
         currPose = bundleAdjustmentMotion(matchedWorldPoints, matchedImagePoints, ...
-            currPose, intrinsics, PointsUndistorted', true, 'AbsoluteTolerance', 1e-7, ...
-            'RelativeTolerance', 1e-16,'MaxIteration', 20);
+            currPose, );
 
     end
 
