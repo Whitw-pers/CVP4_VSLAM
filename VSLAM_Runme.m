@@ -375,6 +375,8 @@ while currFrame < length(imds.Files)
     
 end
 
+%% Final Optimization and Plotting
+
 % finish with pose graph optimization
 if isLoopClosed
 
