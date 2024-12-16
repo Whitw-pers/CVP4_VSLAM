@@ -1,10 +1,26 @@
 function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = ...
             stockKeyframeSelector(worldPointSet, keyframeSet, worldPointsIdx, ...
             featureIdx, currPose, currFeatures, currPoints, intrinsics, ...
-            isLastKeyframe, lastKeyframe, currFrame);
+            newKeyframeAdded, isLastKeyframe, lastKeyframe, currFrame)
 % performs role of helperTrackLocalMap()
 % INPUTS:
+    % worldPointSet:
+    % keyframeSet:
+    % worldPointsIdx:
+    % featureIdx:
+    % currPose:
+    % currFeatures:
+    % currPoints:
+    % intrinsics:
+    % isLastKeyframe: doesn't seem to be used, may remove
+    % lastKeyframe:
+    % currFrame:
 % OUTPUTS:
+    % localKeyframeIDs:
+    % currPose:
+    % worldPointsIdx:
+    % featureIdx:
+    % isKeyframe:
 
     % adjust parameters to tune performance of stock keyframe selector
     numSkipFrames = 20;
@@ -15,7 +31,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
 
     if isempty(numPointsRefKeyframe) || newKeyframeAdded
         [localPointsIdx, localKeyframeIDsInternal, numPointsRefKeyframe] = ...
-            updateRefKeyFrameAndLocalPoints(worldPointSet, keyframeSet, worldPointsIdx);
+            updateRefKeyframeAndLocalPoints(worldPointSet, keyframeSet, worldPointsIdx);
     end
 
     % project world points into frame and search for more 2D-3D point
@@ -23,7 +39,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     newWorldPointIdx = setdiff(localPointsIdx, worldPointsIdx, 'stable');
     [localFeatures, localPoints] = getFeatures(worldPointSet, keyframeSet.Views, ...
         newWorldPointIdx);
-    [projectedPoints, inliersIdx] = removeOutlierMapPoints(worldPointSet, ...
+    [projectedPoints, inliersIdx] = removeOutlierWorldPoints(worldPointSet, ...
         currPose, intrinsics, newWorldPointIdx, scaleFactor);
 
     newWorldPointIdx = newWorldPointIdx(inliersIdx);
@@ -53,7 +69,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     matchedWorldPoints = worldPointSet.WorldPoints(worldPointsIdx, :);
     matchedImagePoints = currPoints.Location(featureIdx, :);
 
-    isKeyframe = checkKeyFrame(numPointsRefKeyframe, lastKeyframe, currFrame, ...
+    isKeyframe = checkKeyframe(numPointsRefKeyframe, lastKeyframe, currFrame, ...
         worldPointsIdx, numSkipFrames, numPointsKeyframe);
     localKeyframeIDs = localKeyframeIDsInternal;
 
@@ -67,3 +83,115 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
 
 end
 
+%% internal functions called by stockKeyframeSelector()
+function [localPointsIdx, localKeyframeIDs, numPointsRefKeyframe] = ...
+    updateRefKeyframeAndLocalPoints(worldPoints, keyframeSet, pointsIdx)
+    
+    if keyframeSet.NumViews == 1
+        localKeyframeIDs = keyframeSet.Views.ViewId;
+        localPointsIdx = (1:worldPoints.Count)';
+        numPointsRefKeyframe = worldPoints.Count;
+        return
+    end
+
+    % the reference keyframe has the most covisible 3D world points
+    viewIDs = findViewsOfWorldPoint(worldPoints, pointsIdx);
+    refKeyframeID = mode(vertcat(viewIDs{:}));
+
+    localKeyframes = connectedViews(keyframeSet, refKeyframeID, "MaxDistance", 2);
+    localKeyframeIDs = [localKeyframes.ViewId; refKeyframeID];
+
+    pointsIdx = findWorldPointsInView(worldPoints, localKeyframeIDs);
+    if iscell(pointsIdx)
+        numPointsRefKeyframe = numel(pointsIdx{localKeyframeIDs == refKeyframeID});
+        localPointsIdx = sort(vertcat(pointsIdx{:}));
+    else
+        numPointsRefKeyframe = numel(pointIdx);
+        localPointsIdx = sort(pointIdx);
+    end
+end
+
+function [features, points] = getFeatures(worldPoints, views, worldPointIdx)
+
+    allIdxs = zeros(1, numel(worldPoints));
+
+    count = [];
+    viewFeatures = views.Features;
+    viewPoints = views.Points;
+
+    for i = 1:numel(worldPointIdx)
+        idx3D = worldPointIdx(i);
+        viewID = double(worldPoints.RepresentativeViewId(idx3D));
+
+        if isempty(count)
+            count = [viewID, size(viewFeatures{viewID}, 1)];
+        elseif ~any(count(:, 1) == viewID)
+            count = [count; viewID, size(viewFeatures{viewID}, 1)]
+        end
+
+        idx = find(count(:, 1) == viewID);
+        if idx > 1
+            offset = sum(count(1:idx - 1, 2));
+        else
+            offset = 0;
+        end
+        allIdxs(i) = worldPoints.RepresentativeFeatureIndex(idx3D) + offset;
+
+    end
+
+    uIDs = count(:, 1);
+
+    % concat features and indexes is faster than processing via for loop
+    allFeatures = vertcat(viewFeatures{uIDs});
+    features = allFeatures(allIdxs, :);
+    allPoints = vertcat(viewPoints{uIDs});
+    points = allPoints(allIdxs, :);
+
+end
+
+function [projectedPoints, inliers] = removeOutlierWorldPoints(worldPoints, ...
+    pose, intrinsics, localPointsIdx, scaleFactor)
+    
+    % points within image bounds
+    points3D = worldPoints.WorldPoints(localPointsIdx, :);
+    [projectedPoints, isInImage] = world2img(points3D, pose2extr(pose), intrinsics);
+
+    if isempty(projectedPoints)
+        error('Tracking failed. Try inserting new key frames more frequently.')
+    end
+
+    % parallax < 60 degrees
+    cam2points = points3D - pose.Translation;
+    viewDirection = worldPoints.ViewingDirection(localPointsIdx, :);
+    validByView = sum(viewDirection .* cam2points, 2) > cosd(60)*(vecnorm(cam2points, 2, 2));
+
+    % distance from world point to camera center is in range of scale
+    % invariant depth
+    minDist = worldPoints.DistanceLimits(localPointsIdx, 1)/scaleFactor;
+    maxDist = worldPoints.DistanceLimits(localPointsIdx, 2)*scaleFactor;
+    dist = vecnorm(points3D - pose.Translation, 2, 2);
+    validByDistance = dist > minDist & dist < maxDist;
+    
+    inliers = isInImage & validByView & validByDistance;
+
+    projectedPoints = projectedPoints(inliers, :);
+
+end
+
+function isKeyframe = checkKeyframe(numPointsRefKeyframe, lastKeyframe, currFrame, ...
+        worldPointsIdx, numSkipFrames, numPointsKeyframe)
+    % insert new keyframe if:
+
+    % more than numSkipFrames passed since last keyframe
+    tooManySkipFrames = currFrame > lastKeyframe + numSkipFrames;
+    
+    % track less than numPointsKeyrame world points
+    tooFewWorldPoints = numel(worldPointsIdx) < numPointsKeyframe;
+
+    % tracked world points are less than 90% of points tracked by the
+    % reference keyframe
+    tooFewTrackedPoints = numel(worldPointsIdx) < 0.9 * numPointsRefKeyframe;
+
+    isKeyframe = (tooManySkipFrames || tooFewWorldPoints) && tooFewTrackedPoints;
+
+end
