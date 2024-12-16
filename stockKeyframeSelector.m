@@ -1,7 +1,7 @@
 function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = ...
             stockKeyframeSelector(worldPointSet, keyframeSet, worldPointsIdx, ...
             featureIdx, currPose, currFeatures, currPoints, intrinsics, ...
-            newKeyframeAdded, isLastKeyframe, lastKeyframe, currFrame)
+            newKeyframeAdded, lastKeyframe, currFrame)
 % performs role of helperTrackLocalMap()
 % INPUTS:
     % worldPointSet:
@@ -12,7 +12,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     % currFeatures:
     % currPoints:
     % intrinsics:
-    % isLastKeyframe: doesn't seem to be used, may remove
+    % newKeyframeAdded:
     % lastKeyframe:
     % currFrame:
 % OUTPUTS:
@@ -76,7 +76,7 @@ function [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = 
     if isKeyframe
         
         currPose = bundleAdjustmentMotion(matchedWorldPoints, matchedImagePoints, ...
-            currPose, intrinsics, PointsUndistorted', true, 'AbsoluteTolerance', 1e-7, ...
+            currPose, intrinsics, 'PointsUndistorted', true, 'AbsoluteTolerance', 1e-7, ...
             'RelativeTolerance', 1e-16,'MaxIteration', 20);
 
     end
