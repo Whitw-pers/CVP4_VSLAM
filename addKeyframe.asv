@@ -2,14 +2,12 @@ function [worldPointSet,keyframeSet] = addKeyframe(worldPointSet, keyframeSet, .
         currPose, currFeatures, currPoints, worldPointsIdx, featureIdx, ...
         localKeyframeIDs)
     
-    viewID = keyframeSet.Views.ViewID(end)+1;
-
     keyframeSet = addView(keyframeSet,viewID, currPose,'Features',...
         currFeatures.Features,'Points',currPoints);
 
     keyFramePoses = keyframeSet.Views.AbsolutePose;
     
-    
+    viewID = keyframeSet.Views.ViewID(end)+1;
 
     for i = 1:numel(localKeyframeIDs)
         keyFrameID = localKeyframeIDs(i);
@@ -24,7 +22,7 @@ function [worldPointSet,keyframeSet] = addKeyframe(worldPointSet, keyframeSet, .
         
         [~,index_past,index_current] = intersect(idx3D,worldPointsIdx,'stable');
 
-        posePast = keyFramePoses(keyFrameID);
+        posePast = viewsAbsPoses(keyFrameID);
 
         poseRelative = rigidtform3d(posePast.R' * currPose.R, ...
             (currPose.Translation - posePast.Translation) * posePast.R);
@@ -36,16 +34,7 @@ function [worldPointSet,keyframeSet] = addKeyframe(worldPointSet, keyframeSet, .
             else
                 coder.varsize('matches',[inf 2],[1,0]);
                 matching_indices = [idx2D(index_past), featureIdx(index_current(:))];
-                keyframeSet = addConnection(keyframeSet,keyFrameID,viewID,...
-                    poseRelative,'Matches',matching_indices);
-            end
-        end
-    end
-
-    worldPointSet = addCorrespondences(worldPointSet, viewID,worldPointsIdx,featureIdx);
+                keyframeSet = addConnection(keyframeSet)
 
 end
 
-function tf = isSimMode()
-    tf = isempty(coder.target);
-end
