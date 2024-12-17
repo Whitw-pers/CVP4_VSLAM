@@ -1,5 +1,6 @@
 function [worldPointSet,keyframeSet, newPointIdx] = createWorldPoints(worldPointSet,...
-    keyframeSet,currKeyframeID,intrinsics,scaleFactor)
+    keyframeSet,currKeyframeID,intrinsics)
+    scaleFactor = 1.2;
     min_Matches = 10;
     min_Parallax   = 3; %degrees
 
@@ -33,7 +34,7 @@ function [worldPointSet,keyframeSet, newPointIdx] = createWorldPoints(worldPoint
         euclideanDistances = sqrt(squaredDistances);   % Square root of summed squares
         med_depth = median(euclideanDistances);      % Median of the distances
 
-        if norm(iteration_pose.Translation - currPose.Translation)/medianDepth < 0.01
+        if norm(iteration_pose.Translation - currPose.Translation)/med_depth < 0.01
             continue
         end
 
@@ -74,20 +75,25 @@ function [worldPointSet,keyframeSet, newPointIdx] = createWorldPoints(worldPoint
         matchedPoints_prev = locations_unmatcced_prev(idxPairs(:,1),:);
         matchedPoints_curr = locations_unmatcced_curr(idxPairs(:,2),:);
 
+        % epipole in current keyframe
         epiPole = world2img(iteration_pose.Translation,pose2extr(currPose),intrinsics);
         distToEpipole = vecnorm(matchedPoints_curr - epiPole, 2, 2);
 
+        % compute F
         F = computeF(intrinsics,iteration_pose,currPose);
 
+        % epipolar line in second image
         epiLine = epipolarLine(F,matchedPoints_curr);
         distToLine = abs(sum(epiLine.* [matchedPoints_prev ones(size(matchedPoints_prev,1),1)], 2))./sqrt(sum(epiLine(:,1:2).^2,2));
-
         isCorrect = distToLine < 2*scales_unmatched_curr(idxPairs(:,2)) & ...
-        distToEpipole > 10*scales_unmatched_curr(idxPairs(:,2));
+            distToEpipole > 10*scales_unmatched_curr(idxPairs(:,2));
 
         idxPairs = idxPairs(isCorrect,:);
+        matchedPoints_prev = matchedPoints_prev(isCorrect,:);
+        matchedPoints_curr = matchedPoints_curr(isCorrect,:);
 
-        isposeDifferent = isSufficientParalalx(matchedPoints_prev,matchedPoints_curr,iteration_pose,...
+        % check for sifficient parallax
+        isposeDifferent = isSufficientParallax(matchedPoints_prev,matchedPoints_curr,iteration_pose,...
             currPose,intrinsics,min_Parallax);
         
         matchedPoints_prev = matchedPoints_prev(isposeDifferent,:);
@@ -96,6 +102,7 @@ function [worldPointSet,keyframeSet, newPointIdx] = createWorldPoints(worldPoint
 
         iteration_proj_mat = cameraProjection(intrinsics,pose2extr(iteration_pose));
         
+        % triangulate two views to find world points
         [Points3D, error_reproj, validIdx] = triangulate(matchedPoints_prev,...
             matchedPoints_curr,iteration_proj_mat,currProjMatrix);
 
@@ -111,7 +118,7 @@ function [worldPointSet,keyframeSet, newPointIdx] = createWorldPoints(worldPoint
             map_indices_curr = idxs_unmatched_curr(idxPairs(:,2));
 
             [worldPointSet, idxs] = addWorldPoints(worldPointSet,Points3D);
-            newPointIdx       = [newPointIdx; indices];
+            newPointIdx       = [newPointIdx; idxs];
 
             worldPointSet = addCorrespondences(worldPointSet,linked_IDs(i),idxs,map_indices_prev);
             worldPointSet = addCorrespondences(worldPointSet,currKeyframeID,idxs,map_indices_curr);
@@ -164,11 +171,11 @@ isErrorSmall = projectionErrors < allowedError * min(scaleFrame1, scaleFrame2);
 validPoints = consistentScale & isErrorSmall & pointsVisibility;
 end
 
-function significantParallax = isSufficientParalalx(firstPoints, secondPoints, firstPose, secondPose, cameraParams, minParallaxAngle)
+function significantParallax = isSufficientParallax(firstPoints, secondPoints, firstPose, secondPose, cameraParams, minParallaxAngle)
 
 % Parallax check: Compute rays originating from each camera to the points in homogeneous coordinates
-rayFromFirstCamera = [firstPoints, ones(size(firstPoints, 1), 1)] / cameraParams.K' * firstPose.R';
-rayFromSecondCamera = [secondPoints, ones(size(secondPoints, 1), 1)] / cameraParams.K' * secondPose.R';
+rayFromFirstCamera = [firstPoints, ones(size(firstPoints(:, 1)))] / cameraParams.K' * firstPose.R';
+rayFromSecondCamera = [secondPoints, ones(size(secondPoints(:, 2)))] / cameraParams.K' * secondPose.R';
 
 % Calculate the cosine of the parallax angle between the two rays
 cosineOfParallax = sum(rayFromFirstCamera .* rayFromSecondCamera, 2) ./ ...
