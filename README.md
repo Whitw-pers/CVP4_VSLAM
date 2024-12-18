@@ -10,6 +10,4 @@ https://arxiv.org/abs/1502.00956
 
 RUN INSTRUCTIONS
 
-in MATLAB command window:
-`gTruthFileName = [dataFolder,'rgbd_dataset_freiburg3_long_office_household/groundtruth.txt'];`
-`gTruth = helperImportGroundTruth(gTruthFileName, imds);`
+
