@@ -1,0 +1,65 @@
+function [isLoopClosed, worldPointSet, keyframeSet] = addLoopConnection(...
+    worldPointSet, keyframeSet, loopCandidates, currKeyframeID, ...
+    currFeatures)
+%addLoopConnection Adds connections between the current keyframe and
+%valid loop candidate keyframes, where a valid loop candidate has
+%sufficient covisible world points with the current keyframe.
+
+% Initialize loop closure indicator and list of edges for loop closures
+closureEdgeList = zeros(0, 2, 'uint32');
+candidateCount   = size(loopCandidates,1);
+
+% Retrieve features visible in the current keyframe based on simulation mode
+if isSimMode()
+    [visibleWorldPointIndices, visibleFeatureIndices] = findWorldPointsInView(worldPointSet, currKeyframeID);
+else
+    [indices3dCg, indices2dCg] = findWorldPointsInView(worldPointSet, currKeyframeID);
+    visibleFeatureIndices = indices2dCg{1};
+    visibleWorldPointIndices = indices3dCg{1};
+end
+validFeatures1 = currFeatures.Features(visibleFeatureIndices, :);
+
+% Iterate through each loop candidate keyframe
+for k = 1:candidateCount
+    candidateKeyframeID = loopCandidates(k);
+
+    % Retrieve features visible in the candidate keyframe based on simulation mode
+    if isSimMode()
+        [candidateWorldPointIndices, candidateFeatureIndices] = findWorldPointsInView(worldPointSet, candidateKeyframeID);
+    else
+        [indices3dCg, indices2dCg] = findWorldPointsInView(worldPointSet, candidateKeyframeID);
+        candidateFeatureIndices = indices2dCg{1};
+        candidateWorldPointIndices = indices3dCg{1};
+    end
+    candidateFeatures = keyframeSet.Views.Features{candidateKeyframeID};
+    validFeatures2 = candidateFeatures(candidateFeatureIndices, :);
+
+    % Match features between the current and candidate keyframes
+    featureMatches = matchFeatures(binaryFeatures(validFeatures1), binaryFeatures(validFeatures2), ...
+        'Unique', true, 'MaxRatio', 0.9, 'MatchThreshold', 40);
+
+    % Continue if there aren't enough matches
+    if size(featureMatches, 1) < 50 % Assuming a fixed threshold of 50 for simplicity
+        continue;
+    end
+
+    % Estimate the relative pose based on the matched features
+    transform = estimateRelativePose(featureMatches, visibleWorldPointIndices, candidateWorldPointIndices, worldPointSet, keyframeSet, candidateKeyframeID);
+
+    % Add a connection if the pose estimation is successful
+    if ~isempty(transform)
+        updateSystemState(transform, featureMatches, visibleFeatureIndices, candidateFeatureIndices, worldPointSet, keyframeSet, candidateKeyframeID, currKeyframeID);
+        closureEdgeList = [closureEdgeList; candidateKeyframeID, currKeyframeID]; % Log successful loop closure
+        if isSimMode()
+            disp(['Loop edge added between keyframe: ', num2str(candidateKeyframeID), ' and ', num2str(currKeyframeID)]);
+        end
+    end
+end
+
+% Determine if any loop was closed
+isLoopClosed = ~isempty(closureEdgeList);
+end
+
+function tf = isSimMode()
+tf = isempty(coder.target);
+end
