@@ -85,8 +85,8 @@ currentWorldPoints = worldPointSet.WorldPoints(worldPointIndicesCurrent(featureI
 candidateWorldPoints = worldPointSet.WorldPoints(worldPointIndicesCandidate(featureIndexPairs(:, 2)), :);
 
 % Get the pose transformations for the current and candidate keyframes
-currentPoseTransform = poseToExtrinsics(keyFrameSet.Views.AbsolutePose(currentKeyFrameId));
-candidatePoseTransform = poseToExtrinsics(keyFrameSet.Views.AbsolutePose(candidateKeyFrameId));
+currentPoseTransform = pose2extr(keyFrameSet.Views.AbsolutePose(currentKeyFrameId));
+candidatePoseTransform = pose2extr(keyFrameSet.Views.AbsolutePose(candidateKeyFrameId));
 
 % Transform world points to their respective camera coordinates
 pointsInCurrentCamera = transformPointsForward(currentPoseTransform, currentWorldPoints);

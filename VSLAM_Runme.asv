@@ -223,9 +223,9 @@ lastKeyframeID = currViewID;
 
 % initialize frame indexes for main loop
 lastKeyframe = currFrame - 1;
-addedFrames = [1; lastKeyframe];
+addedFrames = [1, lastKeyframe];
 
-isLoopClosed = false;
+loopClosed = false;
 isLastKeyframe = true;
 
 % create and initialize Kanade-Lucas_Tomasi feature tracker
@@ -261,21 +261,10 @@ while currFrame < length(imds.Files)
         currPoints, lastKeyframeID, intrinsics);
 
     % check if current frame is keyframe
-    %{
     [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = ...
         stockKeyframeSelector(worldPointSet, keyframeSet, worldPointsIdx, ...
         featureIdx, currPose, currFeatures, currPoints, intrinsics, ...
         isLastKeyframe, lastKeyframe, currFrame);
-    %}
-    % it runs using this example function from the mathworks example, so
-    % error is inside stockKeyframeSelector somewhere
-    numSkipFrames     = 20;
-    numPointsKeyFrame = 90;
-    scaleFactor = 1.2;
-    [localKeyframeIDs, currPose, worldPointsIdx, featureIdx, isKeyframe] = ...
-        helperTrackLocalMap(worldPointSet, keyframeSet, worldPointsIdx, ...
-        featureIdx, currPose, currFeatures, currPoints, intrinsics, scaleFactor, ...
-        isLastKeyframe, lastKeyframe, currFrame, numSkipFrames, numPointsKeyFrame);
 
     % Visualize matched features
     updatePlot(featurePlot, currImg, currPoints(featureIdx));
@@ -326,12 +315,12 @@ while currFrame < length(imds.Files)
     % 4) refine poses and points with local bundle adjustment
     [refinedViews, dist] = connectedViews(keyframeSet, currKeyframeID, MaxDistance = 2);
     refinedKeyframeIDs = refinedViews.ViewId;
-    fixedViewIDs = refinedKeyframeIDs(dist == 2);
-    fixedViewIDs = fixedViewIDs(1:min(10, numel(fixedViewIDs)));
+    fixedViews = refinedKeyframeIDs(dist == 2);
+    fixedViews = fixedViews(1:min(10, numel(fixedViewIDs)));
 
     [worldPointSet, keyframeSet, worldPointIdx] = bundleAdjustment(worldPointSet, ...
         keyframeSet, [refinedKeyframeIDs; currKeyframeID], intrinsics, ...
-        FixedViewIDs=fixedViewIDs, PointsUndistorted=true, AbsoluteTolerance=1e-7, ...
+        FixedViewIDs=fixedViewsIDs, PointsUndistorted=true, AbsoluteTolerance=1e-7, ...
         RelativeTolerance=1e-16, Solver="preconditioned-conjugate-gradient", ...
         MaxIteration = 10);
 
@@ -360,6 +349,7 @@ while currFrame < length(imds.Files)
     if currKeyframeID > 20
 
         % detect possible loop closure candidates
+        % put loopEdgeNumMatches in the function
         [isDetected, loopCandidates] = checkLoopClosure(keyframeSet, ...
             currKeyframeID, loopDatabase, currFeatures);
 

@@ -47,7 +47,7 @@ function [isDetected, loopKeyframeIDs] = checkLoopClosure(keyframeSet, ...
 
         groups = nchoosek(loopKeyframeIDs, 3);
         consecGroups = groups(max(groups,[],2) - min(groups,[],2) < 4, :);
-        if ~isEmpty(consecGroups)
+        if ~isempty(consecGroups)
 
             loopKeyframeIDs = consecGroups(1, :);
             isDetected = true;
