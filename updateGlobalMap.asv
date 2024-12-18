@@ -1,0 +1,14 @@
+function worldPointSet = updateGlobalMap(worldPointSet, keyframeSet, ...
+        optKeyframeSet)
+% update world points after pose graph optimization
+% INPUTS
+% OUTPUTS
+
+    oldPoses = keyframeSet.Views.AbsolutePose;
+    newPoses = optKeyframeSet. Views.AbsolutePose;
+    oldPoints = worldPointSet.WorldPoints;
+    newPoints = oldPoints;
+    idxs = 1:worldPointSet.Count;
+
+end
+
