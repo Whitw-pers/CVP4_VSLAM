@@ -1,0 +1,40 @@
+function [worldPointSet,keyframeSet] = addKeyframe(worldPointSet, keyframeSet, ...
+        currPose, currFeatures, currPoints, worldPointsIdx, featureIdx, ...
+        localKeyframeIDs)
+    
+    keyframeSet = addView(keyframeSet,viewID, currPose,'Features',...
+        currFeatures.Features,'Points',currPoints);
+
+    keyFramePoses = keyframeSet.Views.AbsolutePose;
+    
+    viewID = keyframeSet.Views.ViewID(end)+1;
+
+    for i = 1:numel(localKeyframeIDs)
+        keyFrameID = localKeyframeIDs(i);
+        
+        if isSimMode()
+            [idx3D,idx2D] = findWorldPointsInView(worldPointSet,keyFrameID);
+        else
+            [idx3DGenerated, idx2DGenerated] = findWorldPointsInView(worldPointSet,keyFrameID);
+            idx3D = idx3DGenerated{1};
+            idx2D = idx2DGenerated{1};
+        end
+        
+        [~,index_past,index_current] = intersect(idx3D,worldPointsIdx,'stable');
+
+        posePast = viewsAbsPoses(keyFrameID);
+
+        poseRelative = rigidtform3d(posePast.R' * currPose.R, ...
+            (currPose.Translation - posePast.Translation) * posePast.R);
+
+        if numel(index_current) >= 6
+            if isSimMode()
+                keyframeSet = addConnection(keyframeSet,keyFrameID,viewID,...
+                    poseRelative,'Matches', [idx2D(index_past),featureIdx(index_current)]);
+            else
+                coder.varsize('matches',[inf 2],[1,0]);
+                matching_indices = [idx2D(index_past), featureIdx(index_current(:))];
+                keyframeSet = addConnection(keyframeSet)
+
+end
+
