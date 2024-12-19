@@ -8,6 +8,9 @@ https://www.mathworks.com/help/vision/ug/monocular-visual-simultaneous-localizat
 ^ guide is based on:
 https://arxiv.org/abs/1502.00956
 
-RUN INSTRUCTIONS
+RUN INSTRUCTIONS <br/>
+
+in folder Our_Implimentation: <br/>
+VSLAM_Runme.m
 
 
